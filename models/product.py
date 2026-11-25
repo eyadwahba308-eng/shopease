@@ -1,46 +1,33 @@
-from config.database_config import STORAGE
-from core.db_connection import DatabaseConnection
-from core.file_manager import FileManager
+
+from factories.factory_repo import RepositoryFactory
 
 
 class Product:
     def __init__(self, id, name, price):
-        self.id = id
+        self.id = int(id)
         self.name = name
-        self.price = price
+        self.price = float(price)
 
     @staticmethod
     def get_all():
-        if STORAGE == "mysql":
-            db = DatabaseConnection().get_connection()
-            cursor = db.cursor(dictionary=True)
-            cursor.execute("SELECT id, name, price FROM products")
+        repo = RepositoryFactory.get_repository("product")
+        rows = repo.get_all()
 
-            products = []
-            for r in cursor.fetchall():
-                products.append(Product(r["id"], r["name"], float(r["price"])))
-            return products
-
-        rows = FileManager().read_csv("data/products.csv")
         products = []
+
         for r in rows:
-            products.append(Product(int(r["id"]), r["name"], float(r["price"])))
+            products.append(
+                Product(r["id"], r["name"], r["price"])
+            )
+
         return products
 
     @staticmethod
     def get_by_id(id):
-        if STORAGE == "mysql":
-            db = DatabaseConnection().get_connection()
-            cursor = db.cursor(dictionary=True)
-            cursor.execute("SELECT id, name, price FROM products WHERE id=%s", (id,))
+        repo = RepositoryFactory.get_repository("product")
+        r = repo.get_by_id(id)
 
-            r = cursor.fetchone()
-            if r:
-                return Product(r["id"], r["name"], float(r["price"]))
-            return None
+        if r:
+            return Product(r["id"], r["name"], r["price"])
 
-        rows = FileManager().read_csv("data/products.csv")
-        for r in rows:
-            if int(r["id"]) == id:
-                return Product(int(r["id"]), r["name"], float(r["price"]))
         return None
