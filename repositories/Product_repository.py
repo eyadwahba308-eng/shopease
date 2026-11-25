@@ -1,41 +1,52 @@
 
-from config.database_config import STORAGE
 from core.db_connection import DatabaseConnection
 from core.file_manager import FileManager
 
 
-class ProductRepository:
+class MySQLProductRepository:
+    def __init__(self):
+        self.db = DatabaseConnection().get_connection()
 
-    @staticmethod
-    def get_all():
-        if STORAGE == "mysql":
-            db = DatabaseConnection().get_connection()
-            cursor = db.cursor(dictionary=True)
+    def get_all(self):
+        cursor = self.db.cursor(dictionary=True)
+        cursor.execute("SELECT id, name, price FROM products")
 
-            cursor.execute("SELECT id, name, price FROM products")
-            rows = cursor.fetchall()
+        return cursor.fetchall()
 
-            return rows
+    def get_by_id(self, id):
+        cursor = self.db.cursor(dictionary=True)
+        cursor.execute(
+            "SELECT id, name, price FROM products WHERE id=%s",
+            (id,)
+        )
 
-        return FileManager().read_csv("data/products.csv")
+        return cursor.fetchone()
 
-    @staticmethod
-    def get_by_id(id):
-        if STORAGE == "mysql":
-            db = DatabaseConnection().get_connection()
-            cursor = db.cursor(dictionary=True)
 
-            cursor.execute(
-                "SELECT id, name, price FROM products WHERE id=%s",
-                (id,)
-            )
+class CSVProductRepository:
+    def __init__(self):
+        self.file = FileManager()
 
-            return cursor.fetchone()
-
-        rows = FileManager().read_csv("data/products.csv")
+    def get_all(self):
+        rows = self.file.read_csv("data/products.csv")
+        products = []
 
         for r in rows:
-            if int(r["id"]) == id:
-                return r
+            product = {
+                "id": int(r["id"]),
+                "name": r["name"],
+                "price": float(r["price"])
+            }
+
+            products.append(product)
+
+        return products
+
+    def get_by_id(self, id):
+        products = self.get_all()
+
+        for row in products:
+            if row["id"] == id:
+                return row
 
         return None
